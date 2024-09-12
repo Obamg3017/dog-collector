@@ -19,6 +19,18 @@ class DogDetail(generics.RetrieveUpdateDestroyAPIView):
   serializer_class = DogSerializer
   lookup_field = 'id'
 
+  def retrieve(self, request, *args, **kwargs):
+    instance = self.get_object()
+    serializer = self.get_serializer(instance)
+
+    toys_not_associated = Toy.objects.exclude(id__in=instance.toys.all())
+    toys_serializer = ToySerializer(toys_not_associated, many=True)
+
+    return Response({
+        'dog': serializer.data,
+        'toys_not_associated': toys_serializer.data
+    })
+
 class FeedingListCreate(generics.ListCreateAPIView):
   serializer_class = FeedingSerializer
 
@@ -48,3 +60,20 @@ class ToyDetail(generics.RetrieveUpdateDestroyAPIView):
   queryset = Toy.objects.all()
   serializer_class = ToySerializer
   lookup_field = 'id'  
+
+
+class AddToyToDog(APIView):
+  def post(self, request, dog_id, toy_id):
+    dog = Dog.objects.get(id=dog_id)
+    toy = Toy.objects.get(id=toy_id)
+    dog.toys.add(toy)
+    return Response({'message': f'Toy {toy.name} added to Dog {dog.name}'})
+  
+
+class RemoveToyFromDog(APIView):
+  def post(self, request, dog_id, toy_id):
+    dog = Dog.objects.get(id=dog_id)
+    toy = Toy.objects.get(id=toy_id)
+    dog.toys.remove(toy)
+    return Response({'message': f'Toy {toy.name} removed from Dog {dog.name}'})
+
